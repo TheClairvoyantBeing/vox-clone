@@ -1,3 +1,9 @@
+# Credentials
+.env
+
+# Output folders
+outputs/
+
 # Virtual environments
 venv/
 .venv/
