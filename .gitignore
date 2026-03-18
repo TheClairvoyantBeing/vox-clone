@@ -1,0 +1,20 @@
+# Virtual environments
+venv/
+.venv/
+__pycache__/
+
+# Dependencies
+requirements.txt
+
+# Media files
+*.wav
+*.m4a
+*.mp3
+elevenlabs_mp3/
+elevenlabs_wav/
+
+# Model weights (if stored locally)
+*.pt
+*.pth
+*.safe_tensors
+checkpoint/
