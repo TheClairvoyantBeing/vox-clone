@@ -22,6 +22,11 @@ class VoiceEngine:
         }
 
     def download_voice_samples(self):
+        """
+        Fetches shared voice samples from the ElevenLabs API, downloads the 
+        previews, and converts them to 22050Hz Mono WAV format for compatibility
+        with the Chatterbox TTS model.
+        """
         if not self.api_key:
             print("[ERROR] No ElevenLabs API Key. Add it to your .env file.")
             return
@@ -30,7 +35,8 @@ class VoiceEngine:
         print("\n[INFO] Fetching voices from ElevenLabs...")
         
         try:
-            resp = requests.get("https://api.elevenlabs.io/v1/shared-voices", headers=headers, params={"page_size": 100})
+            # Fetch public/shared voices
+            resp = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers, params={"page_size": 100})
             if resp.status_code != 200:
                 print(f"[ERROR] ElevenLabs API failed: {resp.status_code}")
                 return
@@ -38,7 +44,7 @@ class VoiceEngine:
             voices = resp.json().get("voices", [])
             print(f"[INFO] Found {len(voices)} shared voices.")
 
-            # Create directories
+            # Ensure all category directories exist
             for cat in self.category_map.values():
                 os.makedirs(os.path.join(self.mp3_dir, cat), exist_ok=True)
                 os.makedirs(os.path.join(self.wav_dir, cat), exist_ok=True)
@@ -49,9 +55,14 @@ class VoiceEngine:
                 url = voice.get("preview_url", "")
                 cat = voice.get("category", "").lower().replace(" ", "_")
                 
+                # Default to 0_Uncategorized if the category is unknown
                 folder = self.category_map.get(cat, "0_Uncategorized")
                 mp3_path = os.path.join(self.mp3_dir, folder, f"{name}__{vid}.mp3")
                 wav_path = os.path.join(self.wav_dir, folder, f"{name}__{vid}.wav")
+
+                # Ensure path exists for uncategorized or new folders
+                os.makedirs(os.path.join(self.mp3_dir, folder), exist_ok=True)
+                os.makedirs(os.path.join(self.wav_dir, folder), exist_ok=True)
 
                 if not url or os.path.exists(wav_path):
                     continue
@@ -62,7 +73,7 @@ class VoiceEngine:
                 with open(mp3_path, "wb") as f:
                     f.write(r.content)
                 
-                # Convert to 22050 mono wav via ffmpeg
+                # Convert to 22050 mono wav via ffmpeg (Chatterbox requirement)
                 subprocess.run(["ffmpeg", "-y", "-i", mp3_path, "-ar", "22050", "-ac", "1", wav_path], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 

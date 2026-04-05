@@ -1,4 +1,5 @@
 import os
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -50,24 +51,41 @@ Output ONLY the story text. Nothing else.
 
         print(f"\n[INFO] Contacting Nemotron for a {duration_str}-min story...")
         story_text = ""
+        partial_path = f"story_partial_{topic[:20]}.txt"  # add this
         try:
             completion = self.client.chat.completions.create(
-                model="nvidia/nemotron-3-super-120b-a12b",
+                model="nvidia/llama-3.1-nemotron-ultra-253b-v1",  # verify in NIM dashboard
                 messages=[{"role": "user", "content": prompt}],
                 temperature=1,
                 top_p=0.95,
-                max_tokens=16384, # Note: large stories might need stream logic to avoid context/token overflow
+                max_tokens=16384,
                 stream=True
             )
-
             for chunk in completion:
-                if not chunk.choices: continue
+                if not chunk.choices:
+                    continue
                 content = chunk.choices[0].delta.content
                 if content is not None:
                     print(content, end="", flush=True)
                     story_text += content
-            
+                    # save partial every ~500 chars so a crash doesn't lose work
+                    if len(story_text) % 500 < 10:
+                        with open(partial_path, "w", encoding="utf-8") as f:
+                            f.write(story_text)
+
+            if os.path.exists(partial_path):
+                os.remove(partial_path)  # clean up on success
+
+            # strip <think>...</think> blocks (leaked reasoning from Nemotron model)
+            # This handles both complete blocks and partial "leaked" closing tags
+            # so the final output contains only the intended story text.
+            story_text = re.sub(r'<think>.*?</think>', '', story_text, flags=re.DOTALL)
+            story_text = re.sub(r'^.*?</think>', '', story_text, flags=re.DOTALL)
+            story_text = story_text.strip()
+
             return story_text
         except Exception as e:
             print(f"\n[ERROR] Nemotron failed: {e}")
-            return None
+            if story_text:
+                print(f"[INFO] Partial story saved to {partial_path}")
+            return story_text or None
