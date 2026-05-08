@@ -7,10 +7,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class VoiceEngine:
+    """
+    Engine for managing voice reference samples.
+    It primarily interfaces with the ElevenLabs API to fetch high-quality 
+    voice previews and prepares them for the local TTS model.
+    """
     def __init__(self, api_key=None):
+        """
+        Initialize the engine with an optional API key.
+        If not provided, it defaults to the ELEVENLABS_API_KEY env var.
+        """
         self.api_key = api_key or os.getenv("ELEVENLABS_API_KEY")
+        
+        # We store raw mp3s for reference and wavs for the actual TTS processing.
         self.mp3_dir = "elevenlabs_mp3"
         self.wav_dir = "elevenlabs_wav"
+        
+        # Categorization helps the user browse through voices in the CLI.
         self.category_map = {
             "advertisement":           "1_Advertisement",
             "characters_animation":    "2_Characters_and_Animation",

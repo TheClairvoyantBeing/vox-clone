@@ -58,7 +58,17 @@ def clean_text_for_tts(text):
 
 
 class AudioEngine:
+    """
+    Handles the conversion of text to high-fidelity audio.
+    Uses the ChatterboxTTS model for zero-shot voice cloning.
+    Includes robust error handling for VRAM limits and audio normalization.
+    """
     def __init__(self, device=None):
+        """
+        Initializes the TTS model on the best available device (GPU preferred).
+        I also apply a monkey-patch here for the 'perth' watermarker which
+        is known to have compatibility issues on Windows systems.
+        """
         _ensure_perth_works()
 
         from chatterbox.tts import ChatterboxTTS
@@ -125,6 +135,13 @@ class AudioEngine:
         return chunks
 
     def generate_narration(self, text, reference_path, output_path):
+        """
+        Main entry point for audio generation.
+        1. Chunks the text into manageable pieces.
+        2. Generates audio for each chunk (with CUDA -> CPU fallback).
+        3. Normalizes volume levels to prevent 'jarring' transitions.
+        4. Stitches chunks together with natural pauses.
+        """
         chunks = self.chunk_text(text)
         print(f"[AUDIO] {len(chunks)} chunks to process.")
         audio_segments = []
@@ -137,6 +154,7 @@ class AudioEngine:
                 print(f"         VRAM free: {free:.2f} GB")
 
             try:
+                # I use torch.no_grad() to save memory during inference.
                 with torch.no_grad():
                     wav = self.model.generate(
                         chunk,
@@ -150,6 +168,7 @@ class AudioEngine:
                 audio_segments.append(wav)
 
             except torch.cuda.OutOfMemoryError:
+                # Senior Engineer Tip: Always have a CPU fallback for long scripts.
                 print(f"[WARN] CUDA OOM on chunk {i+1}, retrying on CPU...")
                 torch.cuda.empty_cache()
                 try:
@@ -165,7 +184,7 @@ class AudioEngine:
                     wav = wav.cpu()
                     wav = self.normalize_rms(wav)
                     audio_segments.append(wav)
-                    self.model.to(self.device)
+                    self.model.to(self.device) # Move back to GPU for next chunk
                 except Exception as e2:
                     print(f"[WARN] CPU retry failed ({e2}). Skipping chunk.")
 
@@ -177,7 +196,8 @@ class AudioEngine:
                     torch.cuda.empty_cache()
 
         if audio_segments:
-            # brief silence between chunks (0.2s) for natural pacing
+            # I add a brief silence (200ms) between chunks.
+            # This mimics natural human breathing and sentence pacing.
             silence = torch.zeros(1, int(0.2 * self.model.sr))
             with_pauses = []
             for seg in audio_segments:

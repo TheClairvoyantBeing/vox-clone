@@ -8,6 +8,11 @@ from modules.audio_engine import AudioEngine
 from modules.voice_engine import VoiceEngine
 
 def cleanup_empty_folders(root):
+    """
+    Recursively removes empty directories starting from the root.
+    I added this because the dynamic output generation can sometimes leave 
+    orphan directories if a session is aborted early.
+    """
     for dir_path, dir_names, file_names in os.walk(root, topdown=False):
         if not dir_names and not file_names:
             try:
@@ -16,6 +21,13 @@ def cleanup_empty_folders(root):
                 pass
 
 def select_mode():
+    """
+    Interactive CLI menu for selecting the operational mode.
+    I kept this simple but effective:
+    1. Story only: Just the LLM part (useful for drafting).
+    2. TTS only: Just the narration (if you have a finished script).
+    3. Auto: The full 'Vox-Clone' experience.
+    """
     print("\n=== VOX-CLONE — MODE SELECT ===")
     print("1. Story only     (generate script, save story.txt)")
     print("2. TTS only       (narrate an existing story.txt)")
@@ -24,38 +36,53 @@ def select_mode():
     return {"1": "story", "2": "tts", "3": "auto"}.get(choice, "auto")
 
 def select_voice(voice_engine):
+    """
+    Handles the logic for selecting a reference voice.
+    Supports either pre-downloaded ElevenLabs samples or a local user file.
+    Note: If a user provides an mp3/m4a, we convert it to 22k mono wav 
+    on the fly to satisfy the TTS engine requirements.
+    """
     print("\n--- VOICE SELECTION ---")
     print("1. ElevenLabs pre-downloaded samples")
     print("2. Your own voice sample")
     voice_choice = input("Select (1/2): ").strip()
     reference_path = ""
     if voice_choice == "1":
+        # Strategy: Use the cached samples if available, otherwise fetch them.
         wav_dir = voice_engine.wav_dir
         if not os.path.exists(wav_dir) or not os.listdir(wav_dir):
             voice_engine.download_voice_samples()
+        
         categories = sorted([
             d for d in os.listdir(wav_dir)
             if os.path.isdir(os.path.join(wav_dir, d)) and os.listdir(os.path.join(wav_dir, d))
         ])
+        
         if not categories:
             print("[ERROR] No voice categories found.")
             sys.exit(1)
+            
         for idx, cat in enumerate(categories, 1):
             print(f"  {idx}. {cat}")
         cat_idx = int(input("Category: ").strip()) - 1
         cat_path = os.path.join(wav_dir, categories[cat_idx])
+        
         voices = sorted([f for f in os.listdir(cat_path) if f.endswith(".wav")])
         for idx, voice in enumerate(voices, 1):
             print(f"  {idx}. {voice.split('__')[0]}")
         voice_idx = int(input("Voice: ").strip()) - 1
         reference_path = os.path.join(cat_path, voices[voice_idx])
     else:
+        # For local samples, we handle potential conversion.
         sample_path = input("Path to voice sample: ").strip().replace('"', '')
         if not os.path.exists(sample_path):
             print(f"[ERROR] Not found: {sample_path}")
             sys.exit(1)
+            
         ext = os.path.splitext(sample_path)[1].lower()
         if ext in [".mp4", ".mp3", ".m4a"]:
+            # TTS engine specifically needs 22050Hz Mono. 
+            # We use a temp file to avoid mutating the original source.
             temp_wav = "temp_reference.wav"
             if convert_to_wav(sample_path, temp_wav):
                 reference_path = temp_wav
@@ -63,6 +90,7 @@ def select_voice(voice_engine):
                 sys.exit(1)
         else:
             reference_path = sample_path
+            
     return reference_path
 
 def main():

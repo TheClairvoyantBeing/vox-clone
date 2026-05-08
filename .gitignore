@@ -1,26 +1,46 @@
-# Credentials
+# --- Credentials & Local Config ---
 .env
+.env.local
+.env.*.local
 
-# Output folders
+# --- Output folders (generated content) ---
 outputs/
+story_partial_*.txt
+temp_reference.wav
 
-# Virtual environments
-venv/
-.venv/
-__pycache__/
-
-# Dependencies
-requirements.txt
-
-# Media files
+# --- Media & Voice Data ---
+# We ignore high-res audio samples to keep the repo lightweight
 *.wav
 *.m4a
 *.mp3
 elevenlabs_mp3/
 elevenlabs_wav/
+voice_samples/
 
-# Model weights (if stored locally)
+# --- Virtual Environments & Python Cache ---
+venv/
+.venv/
+env/
+bin/
+lib/
+include/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Model Weights & Large Binary Files ---
 *.pt
 *.pth
 *.safe_tensors
 checkpoint/
+
+# --- IDEs & System Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Packaging & Distribution ---
+dist/
+build/
+*.egg-info/

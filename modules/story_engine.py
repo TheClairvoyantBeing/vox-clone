@@ -6,7 +6,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class StoryEngine:
+    """
+    Core engine for horror/mystery story generation.
+    It utilizes NVIDIA's NIM (hosted Llama-3 models) to produce 
+    Reddit-style 'nosleep' content with specific formatting rules.
+    """
     def __init__(self, api_key=None):
+        """
+        Connects to the NVIDIA NIM base URL.
+        Requires a valid NVIDIA_API_KEY from the NIM dashboard.
+        """
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY")
         if not self.api_key:
             raise ValueError("[ERROR] No NVIDIA_API_KEY found. Check your .env file.")
