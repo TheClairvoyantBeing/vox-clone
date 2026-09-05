@@ -44,3 +44,12 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Standard repository hygiene
+node_modules/
+out/
+target/
+coverage/
+htmlcov/
+.env.*
+reviews.md
