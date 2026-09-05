@@ -1,7 +1,12 @@
 # modules/audio_engine.py
 import re
-import torch
-import torchaudio as ta
+
+try:
+    import torch
+    import torchaudio as ta
+except ImportError:
+    torch = None
+    ta = None
 
 
 class _NullWatermarker:
@@ -49,6 +54,8 @@ def clean_text_for_tts(text):
     text = re.sub(r'\[([a-z\s]+)\]', '', text, flags=re.IGNORECASE)
     # remove markdown leftovers
     text = re.sub(r'\*+', '', text)
+    # remove spaces before punctuation
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
     # collapse multiple spaces/newlines
     text = re.sub(r'\n{2,}', '\n', text)
     text = re.sub(r'[ \t]+', ' ', text)

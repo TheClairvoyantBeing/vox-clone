@@ -34,11 +34,6 @@ jobs:
           # Warnings as non-blocking
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Run tests with pytest
+      - name: Run tests
         run: |
-          if [ -d "tests" ]; then
-            pip install pytest
-            pytest tests/ -v
-          else
-            echo "No tests/ directory found — skipping pytest"
-          fi
+          python -m unittest discover -s tests
